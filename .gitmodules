@@ -1,0 +1,3 @@
+[submodule "winghacks/chatbot"]
+	path = winghacks/chatbot
+	url = https://github.com/matthewdeguzman/WiNGHacks-Workshop.git
