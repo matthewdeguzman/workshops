@@ -13,14 +13,8 @@ import (
 	"strings"
 )
 
-type QRCodeConfig struct {
-	Url         string `json:"url"`
-	Title       string `json:"title"`
-	Description string `json:"description"`
-}
-
 const MAX_UPLOAD_SIZE int64 = 1024 * 1024 // 1 MB
-const QR_CODE_PATH = "../db/qr-codes/"
+const QR_CODE_PATH = "./db/qrcodes"
 
 var qrdb = db.GetInstance()
 
@@ -36,7 +30,7 @@ func (mr *MalformedRequest) Error() string {
 func GenerateQRCode(w http.ResponseWriter, r *http.Request) {
 	log.Println("Generating QR code")
 
-	var qrCodeConfig QRCodeConfig
+	var qrCodeConfig db.QRCodeConfig
 
 	err := DecodeJSONBody(w, r, &qrCodeConfig)
 	if err != nil {
@@ -46,14 +40,16 @@ func GenerateQRCode(w http.ResponseWriter, r *http.Request) {
 	}
 
 	filePath := fmt.Sprintf("%s/%s.png", QR_CODE_PATH, uuid.New().String())
+	log.Println("Writing to file:", filePath)
 	err = qrcode.WriteFile(qrCodeConfig.Url, qrcode.Medium, 256, filePath)
 	if err != nil {
 		log.Println(err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
 
-	_, err = qrdb.Write(qrCodeConfig.Url, 256, filePath)
+	log.Println("Saving QR code to db")
+	qr, err := qrdb.Write(qrCodeConfig)
 	if err != nil {
 		log.Println("Unable to write to db:", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
@@ -61,6 +57,8 @@ func GenerateQRCode(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.ResponseWriter.WriteHeader(w, http.StatusCreated)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(qr)
 	log.Println("Successfully generated code")
 }
 
