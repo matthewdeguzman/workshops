@@ -10,13 +10,15 @@ import (
 )
 
 type DB struct {
-	qrcodes map[uint32]*QRCode
+	qrcodes map[string]*QRCode
 }
 
+// TODO: Add title and description and remove size
 type QRCode struct {
-	ID   uint32 `json:"id"`
+	ID   string `json:"id"`
 	Url  string `json:"url"`
 	Size uint32 `json:"size"`
+	Path string `json:"path"`
 }
 
 var instance *DB
@@ -27,7 +29,7 @@ func (db *DB) init() {
 	dbMtx.Lock()
 	defer dbMtx.Unlock()
 
-	db.qrcodes = make(map[uint32]*QRCode)
+	db.qrcodes = make(map[string]*QRCode)
 	file, err := os.ReadFile("db.json")
 	if err != nil {
 		log.Println("Failed to load db.json")
@@ -56,13 +58,13 @@ func (db *DB) GetAll() ([]*QRCode, error) {
 
 	var qrcodes []*QRCode
 	for _, qr := range db.qrcodes {
-		qrcodes = append(qrcodes, &QRCode{ID: qr.ID, Url: qr.Url, Size: qr.Size})
+		qrcodes = append(qrcodes, &QRCode{ID: qr.ID, Url: qr.Url, Size: qr.Size, Path: qr.Path})
 	}
 
 	return qrcodes, nil
 }
 
-func (db *DB) GetById(id uint32) (*QRCode, error) {
+func (db *DB) GetById(id string) (*QRCode, error) {
 	dbMtx.Lock()
 	defer dbMtx.Unlock()
 
@@ -70,10 +72,10 @@ func (db *DB) GetById(id uint32) (*QRCode, error) {
 		return nil, errors.New("QR code not found")
 	}
 
-	return db.qrcodes[id], nil
+	return &QRCode{ID: db.qrcodes[id].ID, Url: db.qrcodes[id].Url, Size: db.qrcodes[id].Size, Path: db.qrcodes[id].Path}, nil
 }
 
-func (db *DB) Delete(id uint32) error {
+func (db *DB) Delete(id string) error {
 	dbMtx.Lock()
 	defer dbMtx.Unlock()
 	defer db.save()
@@ -86,7 +88,7 @@ func (db *DB) Delete(id uint32) error {
 	return nil
 }
 
-func (db *DB) Update(qr *QRCode) error {
+func (db *DB) Update(qr QRCode) error {
 
 	dbMtx.Lock()
 	defer dbMtx.Unlock()
@@ -96,17 +98,18 @@ func (db *DB) Update(qr *QRCode) error {
 		return errors.New("QR code not found")
 	}
 
-	db.qrcodes[qr.ID] = &QRCode{ID: qr.ID, Url: qr.Url, Size: qr.Size}
+	db.qrcodes[qr.ID] = &qr
 	return nil
 }
 
-func (db *DB) Write(url string, size uint32) (QRCode, error) {
+func (db *DB) Write(url string, size uint32, path string) (QRCode, error) {
 
-	id := uuid.New().ID()
+	id := uuid.New().String()
 	qr := &QRCode{
 		ID:   id,
 		Url:  url,
 		Size: size,
+		Path: path,
 	}
 
 	dbMtx.Lock()

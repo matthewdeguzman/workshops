@@ -1,9 +1,11 @@
 package api
 
 import (
+	"awesome-qrcode-generator/internal/db"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/google/uuid"
 	qrcode "github.com/skip2/go-qrcode"
 	"io"
 	"log"
@@ -12,11 +14,15 @@ import (
 )
 
 type QRCodeConfig struct {
-	Url  string `json:"url"`
-	Size int    `json:"size"`
+	Url         string `json:"url"`
+	Title       string `json:"title"`
+	Description string `json:"description"`
 }
 
 const MAX_UPLOAD_SIZE int64 = 1024 * 1024 // 1 MB
+const QR_CODE_PATH = "../db/qr-codes/"
+
+var qrdb = db.GetInstance()
 
 type MalformedRequest struct {
 	Status int
@@ -33,14 +39,28 @@ func GenerateQRCode(w http.ResponseWriter, r *http.Request) {
 	var qrCodeConfig QRCodeConfig
 
 	err := DecodeJSONBody(w, r, &qrCodeConfig)
-	log.Println(qrCodeConfig)
-	qrCodeConfig.Size = max(qrCodeConfig.Size, 256)
-	err = qrcode.WriteFile(qrCodeConfig.Url, qrcode.Medium, qrCodeConfig.Size, "qr.png")
+	if err != nil {
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		log.Println("Unable to decode request body")
+		return
+	}
+
+	filePath := fmt.Sprintf("%s/%s.png", QR_CODE_PATH, uuid.New().String())
+	err = qrcode.WriteFile(qrCodeConfig.Url, qrcode.Medium, 256, filePath)
 	if err != nil {
 		log.Println(err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	_, err = qrdb.Write(qrCodeConfig.Url, 256, filePath)
+	if err != nil {
+		log.Println("Unable to write to db:", err)
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+
+	http.ResponseWriter.WriteHeader(w, http.StatusCreated)
 	log.Println("Successfully generated code")
 }
 
