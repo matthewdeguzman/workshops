@@ -44,6 +44,18 @@ func GenerateQRCode(w http.ResponseWriter, r *http.Request) {
 	log.Println("Successfully generated code")
 }
 
+func DeleteQRCode(w http.ResponseWriter, r *http.Request) {
+	log.Println("Deleting QR code")
+}
+
+func UpdateQRCode(w http.ResponseWriter, r *http.Request) {
+	log.Println("Updating QR code")
+}
+
+func GetQRCode(w http.ResponseWriter, r *http.Request) {
+	log.Println("Getting QR code")
+}
+
 func DecodeJSONBody(w http.ResponseWriter, r *http.Request, dst interface{}) error {
 	ct := r.Header.Get("Content-Type")
 	if ct != "" {
