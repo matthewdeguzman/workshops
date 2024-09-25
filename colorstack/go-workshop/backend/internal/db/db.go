@@ -15,6 +15,8 @@ type DB struct {
 
 const DB_LOCATION = "./db/db.json"
 
+var CodeNotFound error = errors.New("QR code not found")
+
 var instance *DB
 var singletonMtx = &sync.Mutex{}
 var dbMtx = &sync.Mutex{}
@@ -76,7 +78,7 @@ func (db *DB) GetById(id string) (*QRCode, error) {
 	defer dbMtx.Unlock()
 
 	if _, ok := db.qrcodes[id]; !ok {
-		return nil, errors.New("QR code not found")
+		return nil, CodeNotFound
 	}
 
 	return &QRCode{
@@ -86,11 +88,12 @@ func (db *DB) GetById(id string) (*QRCode, error) {
 
 func (db *DB) Delete(id string) error {
 	dbMtx.Lock()
-	defer db.saveAndUnlock()
 
 	if _, ok := db.qrcodes[id]; !ok {
-		return errors.New("QR code not found")
+		dbMtx.Unlock()
+		return CodeNotFound
 	}
+	defer db.saveAndUnlock()
 
 	delete(db.qrcodes, id)
 	return nil
@@ -99,11 +102,12 @@ func (db *DB) Delete(id string) error {
 func (db *DB) Update(qr QRCode) error {
 
 	dbMtx.Lock()
-	defer db.saveAndUnlock()
 
 	if _, ok := db.qrcodes[qr.ID]; !ok {
-		return errors.New("QR code not found")
+		dbMtx.Unlock()
+		return CodeNotFound
 	}
+	defer db.saveAndUnlock()
 
 	db.qrcodes[qr.ID] = &qr
 	return nil

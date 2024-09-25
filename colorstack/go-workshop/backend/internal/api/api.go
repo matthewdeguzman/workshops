@@ -23,6 +23,10 @@ type MalformedRequest struct {
 	Msg    string
 }
 
+type DeletePayload struct {
+	Id string `json:"id"`
+}
+
 func (mr *MalformedRequest) Error() string {
 	return mr.Msg
 }
@@ -30,9 +34,9 @@ func (mr *MalformedRequest) Error() string {
 func GenerateQRCode(w http.ResponseWriter, r *http.Request) {
 	log.Println("Generating QR code")
 
-	var qrCodeConfig db.QRCodeConfig
+	var payload db.QRCodeConfig
 
-	err := DecodeJSONBody(w, r, &qrCodeConfig)
+	err := DecodeJSONBody(w, r, &payload)
 	if err != nil {
 		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 		log.Println("Unable to decode request body")
@@ -41,7 +45,7 @@ func GenerateQRCode(w http.ResponseWriter, r *http.Request) {
 
 	filePath := fmt.Sprintf("%s/%s.png", QR_CODE_PATH, uuid.New().String())
 	log.Println("Writing to file:", filePath)
-	err = qrcode.WriteFile(qrCodeConfig.Url, qrcode.Medium, 256, filePath)
+	err = qrcode.WriteFile(payload.Url, qrcode.Medium, 256, filePath)
 	if err != nil {
 		log.Println(err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
@@ -49,7 +53,7 @@ func GenerateQRCode(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Println("Saving QR code to db")
-	qr, err := qrdb.Write(qrCodeConfig)
+	qr, err := qrdb.Write(payload)
 	if err != nil {
 		log.Println("Unable to write to db:", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
@@ -63,7 +67,27 @@ func GenerateQRCode(w http.ResponseWriter, r *http.Request) {
 }
 
 func DeleteQRCode(w http.ResponseWriter, r *http.Request) {
-	log.Println("Deleting QR code")
+	log.Println("Decoding body")
+	var payload DeletePayload
+	err := DecodeJSONBody(w, r, &payload)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+
+	log.Println("Deleting code")
+	err = qrdb.Delete(payload.Id)
+	if err != nil {
+		if err == db.CodeNotFound {
+			http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+		} else {
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		}
+		log.Println("Unsuccessful deletion")
+		return
+	}
+	log.Println("Successfully deleted code")
 }
 
 func UpdateQRCode(w http.ResponseWriter, r *http.Request) {
