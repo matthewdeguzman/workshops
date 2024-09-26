@@ -3,12 +3,12 @@
 	import { quadOut } from 'svelte/easing';
 	import { fly, fade } from 'svelte/transition';
 	import type { PageServerData } from './$types';
-	const id = $page.params.id;
+	$: id = $page.params.id;
 
 	export let data: PageServerData;
-	const code = data.code;
+	$: code = data.code;
 	let formElement: HTMLFormElement;
-	let editing = false;
+	let editing = $page.url.searchParams.get('edit') === 'true';
 
 	async function handleUpdate(e: SubmitEvent) {
 		console.log('submitted');

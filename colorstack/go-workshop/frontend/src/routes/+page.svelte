@@ -32,18 +32,26 @@
 	}
 </script>
 
-<section class="h-screen grid grid-cols-1 items-center justify-items-center">
-	<form
-		class="flex flex-col gap-2"
-		action="http://localhost:8080/api/generate"
-		method="POST"
-		on:submit={handleSubmit}
-		bind:this={form}
-	>
-		<h1 class="title">Awesome QR Code Generator</h1>
-		<input class="event-input" type="text" name="url" placeholder="URL" required />
-		<input class="event-input" type="text" name="title" placeholder="Event Title" />
-		<input class="event-input" type="text" name="description" placeholder="Event Description" />
-		<button type="submit" class="btn">Generate QR Code</button>
-	</form>
+<section class="h-screen grid grid-cols-1 items-center justify-items-center relative">
+	<div>
+		<form
+			class="flex flex-col gap-2 relative"
+			action="http://localhost:8080/api/generate"
+			method="POST"
+			on:submit={handleSubmit}
+			bind:this={form}
+		>
+			<h1 class="title">Awesome QR Code Generator</h1>
+			<input class="event-input" type="text" name="url" placeholder="URL" required />
+			<input class="event-input" type="text" name="title" placeholder="Event Title" />
+			<input class="event-input" type="text" name="description" placeholder="Event Description" />
+			<button type="submit" class="btn">Generate QR Code</button>
+		</form>
+	</div>
 </section>
+
+<style lang="postcss">
+	.open {
+		transform: translateX(16rem);
+	}
+</style>
