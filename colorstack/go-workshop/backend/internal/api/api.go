@@ -39,7 +39,7 @@ func (mr *MalformedRequest) Error() string {
 
 func GenerateQRCode(w http.ResponseWriter, r *http.Request) {
 	log.Println("Parsing form")
-	err := r.ParseForm()
+	err := r.ParseMultipartForm(1024 * 10) // 10 KB
 	if err != nil {
 		log.Println("Error ocurred during form processing:", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
@@ -82,7 +82,6 @@ func GenerateQRCode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.ResponseWriter.WriteHeader(w, http.StatusCreated)
 	log.Println("Successfully generated code")
 }
 
