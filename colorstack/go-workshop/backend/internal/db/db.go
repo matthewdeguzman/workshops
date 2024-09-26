@@ -3,10 +3,12 @@ package db
 import (
 	"encoding/json"
 	"errors"
-	"github.com/google/uuid"
 	"log"
 	"os"
 	"sync"
+	"time"
+
+	"github.com/teris-io/shortid"
 )
 
 type DB struct {
@@ -15,7 +17,10 @@ type DB struct {
 
 const DB_LOCATION = "./db/db.json"
 
+var sid = shortid.MustNew(1, shortid.DefaultABC, uint64(time.Now().Unix()))
+
 var CodeNotFound error = errors.New("QR code not found")
+var InternalDbError error = errors.New("Internal Database Error")
 
 var instance *DB
 var singletonMtx = &sync.Mutex{}
@@ -46,12 +51,14 @@ func (db *DB) save() {
 	if err != nil {
 		log.Println("[DB] Failed to parse qr codes")
 		log.Println(err)
+		return
 	}
 
-	os.WriteFile(DB_LOCATION, json, os.ModePerm)
+	err = os.WriteFile(DB_LOCATION, json, os.ModePerm)
 	if err != nil {
 		log.Println("[DB] Failed to save db.json")
 		log.Println(err)
+		return
 	}
 	log.Println("[DB] Finished writing to db.json")
 }
@@ -61,13 +68,13 @@ func (db *DB) saveAndUnlock() {
 	db.save()
 }
 
-func (db *DB) GetAll() ([]*QrCodeDb, error) {
+func (db *DB) GetAll() ([]QrCode, error) {
 	dbMtx.Lock()
 	defer dbMtx.Unlock()
 
-	var qrcodes []*QrCodeDb
+	var qrcodes []QrCode
 	for _, qr := range db.qrcodes {
-		qrcodes = append(qrcodes, qr)
+		qrcodes = append(qrcodes, qr.QrCode)
 	}
 
 	return qrcodes, nil
@@ -113,8 +120,12 @@ func (db *DB) Update(id string, title string, description string) error {
 }
 
 func (db *DB) Write(qrcode QrCodeData, path string) (QrCodeDb, error) {
+	id, err := sid.Generate()
+	if err != nil {
+		log.Println("[DB] Unable to create short id:", err)
+		return QrCodeDb{}, InternalDbError
+	}
 
-	id := uuid.New().String()
 	qr := &QrCodeDb{Path: path, QrCode: QrCode{Id: id, QrCodeData: qrcode}}
 
 	dbMtx.Lock()
@@ -127,7 +138,6 @@ func (db *DB) Write(qrcode QrCodeData, path string) (QrCodeDb, error) {
 
 func GetInstance() *DB {
 	if instance == nil {
-		// Prevent data races :)
 		singletonMtx.Lock()
 		defer singletonMtx.Unlock()
 		if instance == nil {
