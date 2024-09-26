@@ -127,7 +127,56 @@ func UpdateQRCode(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetQRCode(w http.ResponseWriter, r *http.Request) {
-	log.Println("Getting QR code")
+	log.Println("Fetching Qr Code")
+	id := r.URL.Query().Get("id")
+	all := r.URL.Query().Get("all")
+
+	if all != "" && id != "" {
+		http.Error(w, "Request must specify either 'id' or 'all' but not both", http.StatusBadRequest)
+		return
+	}
+
+	if all == "true" {
+		log.Println("Fetching all QR codes")
+		codes, err := qrdb.GetAll()
+		if err != nil {
+			log.Println("Unable to fetch QR codes:", err)
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+		log.Println("Fetched all codes!")
+
+		w.Header().Set("Content-Type", "application/json")
+		err = json.NewEncoder(w).Encode(codes)
+		if err != nil {
+			log.Println("Unable to encode response:", err)
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		}
+		return
+	}
+
+	qr, err := qrdb.GetById(id)
+	if err != nil {
+		if err == db.CodeNotFound {
+			log.Printf("Code with id '%s' not found\n", id)
+			http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+		} else {
+			log.Println(err)
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		}
+		return
+	}
+	log.Println("Code found!")
+
+	w.Header().Set("Content-Type", "application/json")
+	err = json.NewEncoder(w).Encode(qr.QrCode)
+	if err != nil {
+		log.Println("Unable to encode response:", err)
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+
+	log.Println("Successfully encoded and code")
 }
 
 func DecodeJSONBody(w http.ResponseWriter, r *http.Request, dst interface{}) error {
