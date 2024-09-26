@@ -1,4 +1,7 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
+	import type { QrCode } from '$lib/types';
+
 	const token = '1234567890';
 
 	let form: HTMLFormElement;
@@ -8,13 +11,21 @@
 		const formData = new FormData(form);
 		console.log(Object.fromEntries(formData));
 		try {
-			await fetch('http://localhost:8080/api/generate', {
+			const resp = await fetch('http://localhost:8080/api/generate', {
 				method: 'POST',
 				headers: {
 					Authorization: `Bearer ${token}`
 				},
 				body: formData
 			});
+
+			if (!resp.ok) {
+				console.error(resp.statusText);
+				return;
+			}
+
+			const json = (await resp.json()) as QrCode;
+			await goto(`/qr/${json.id}`);
 		} catch (error) {
 			console.error(error);
 		}
