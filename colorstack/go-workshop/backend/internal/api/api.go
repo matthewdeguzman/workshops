@@ -27,6 +27,10 @@ type DeletePayload struct {
 	Id string `json:"id"`
 }
 
+type UpdatePayload struct {
+	Id string `json:"id"`
+}
+
 func (mr *MalformedRequest) Error() string {
 	return mr.Msg
 }
@@ -76,7 +80,7 @@ func DeleteQRCode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Println("Deleting code")
+	log.Println("Deleting QR code")
 	err = qrdb.Delete(payload.Id)
 	if err != nil {
 		if err == db.CodeNotFound {
@@ -91,7 +95,27 @@ func DeleteQRCode(w http.ResponseWriter, r *http.Request) {
 }
 
 func UpdateQRCode(w http.ResponseWriter, r *http.Request) {
+	log.Println("Decoding body")
+	var payload UpdatePayload
+	err := DecodeJSONBody(w, r, &payload)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+
 	log.Println("Updating QR code")
+	err = qrdb.Delete(payload.Id)
+	if err != nil {
+		if err == db.CodeNotFound {
+			http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+		} else {
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		}
+		log.Println("Unsuccessful update")
+		return
+	}
+	log.Println("Successfully update code")
 }
 
 func GetQRCode(w http.ResponseWriter, r *http.Request) {
