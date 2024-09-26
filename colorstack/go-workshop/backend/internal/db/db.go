@@ -10,7 +10,7 @@ import (
 )
 
 type DB struct {
-	qrcodes map[string]*QRCode
+	qrcodes map[string]*QrCodeDb
 }
 
 const DB_LOCATION = "./db/db.json"
@@ -25,7 +25,7 @@ func (db *DB) init() {
 	dbMtx.Lock()
 	defer dbMtx.Unlock()
 
-	db.qrcodes = make(map[string]*QRCode)
+	db.qrcodes = make(map[string]*QrCodeDb)
 	file, err := os.ReadFile(DB_LOCATION)
 	if err != nil {
 		log.Println("[DB] Failed to load db.json")
@@ -61,11 +61,11 @@ func (db *DB) saveAndUnlock() {
 	db.save()
 }
 
-func (db *DB) GetAll() ([]*QRCode, error) {
+func (db *DB) GetAll() ([]*QrCodeDb, error) {
 	dbMtx.Lock()
 	defer dbMtx.Unlock()
 
-	var qrcodes []*QRCode
+	var qrcodes []*QrCodeDb
 	for _, qr := range db.qrcodes {
 		qrcodes = append(qrcodes, qr)
 	}
@@ -73,17 +73,15 @@ func (db *DB) GetAll() ([]*QRCode, error) {
 	return qrcodes, nil
 }
 
-func (db *DB) GetById(id string) (*QRCode, error) {
+func (db *DB) GetById(id string) (QrCodeDb, error) {
 	dbMtx.Lock()
 	defer dbMtx.Unlock()
 
 	if _, ok := db.qrcodes[id]; !ok {
-		return nil, CodeNotFound
+		return QrCodeDb{}, CodeNotFound
 	}
 
-	return &QRCode{
-		ID:           db.qrcodes[id].ID,
-		QRCodeConfig: db.qrcodes[id].QRCodeConfig}, nil
+	return *db.qrcodes[id], nil
 }
 
 func (db *DB) Delete(id string) error {
@@ -99,24 +97,25 @@ func (db *DB) Delete(id string) error {
 	return nil
 }
 
-func (db *DB) Update(qr QRCode) error {
+func (db *DB) Update(id string, title string, description string) error {
 
 	dbMtx.Lock()
 
-	if _, ok := db.qrcodes[qr.ID]; !ok {
+	if _, ok := db.qrcodes[id]; !ok {
 		dbMtx.Unlock()
 		return CodeNotFound
 	}
 	defer db.saveAndUnlock()
 
-	db.qrcodes[qr.ID] = &qr
+	db.qrcodes[id].QrCode.Title = title
+	db.qrcodes[id].QrCode.Description = description
 	return nil
 }
 
-func (db *DB) Write(qrcode QRCodeConfig) (QRCode, error) {
+func (db *DB) Write(qrcode QrCodeData, path string) (QrCodeDb, error) {
 
 	id := uuid.New().String()
-	qr := &QRCode{ID: id, QRCodeConfig: qrcode}
+	qr := &QrCodeDb{Path: path, QrCode: QrCode{Id: id, QrCodeData: qrcode}}
 
 	dbMtx.Lock()
 	defer db.saveAndUnlock()

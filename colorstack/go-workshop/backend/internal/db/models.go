@@ -1,13 +1,17 @@
 package db
 
-type QRCodeConfig struct {
+type QrCodeData struct {
 	Url         string `json:"url"`
-	Path        string `json:"path"`
 	Title       string `json:"title"`
 	Description string `json:"description"`
 }
 
-type QRCode struct {
-	ID string `json:"id"`
-	QRCodeConfig
+type QrCode struct {
+	Id string `json:"id"`
+	QrCodeData
+}
+
+type QrCodeDb struct {
+	Path string `json:"path"`
+	QrCode
 }

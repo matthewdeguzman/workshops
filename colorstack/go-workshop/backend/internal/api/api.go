@@ -28,7 +28,9 @@ type DeletePayload struct {
 }
 
 type UpdatePayload struct {
-	Id string `json:"id"`
+	Id          string `json:"id"`
+	Title       string `json:"title"`
+	Description string `json:"description"`
 }
 
 func (mr *MalformedRequest) Error() string {
@@ -38,7 +40,7 @@ func (mr *MalformedRequest) Error() string {
 func GenerateQRCode(w http.ResponseWriter, r *http.Request) {
 	log.Println("Generating QR code")
 
-	var payload db.QRCodeConfig
+	var payload db.QrCodeData
 
 	err := DecodeJSONBody(w, r, &payload)
 	if err != nil {
@@ -57,16 +59,22 @@ func GenerateQRCode(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Println("Saving QR code to db")
-	qr, err := qrdb.Write(payload)
+	qr, err := qrdb.Write(payload, filePath)
 	if err != nil {
 		log.Println("Unable to write to db:", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
 
-	http.ResponseWriter.WriteHeader(w, http.StatusCreated)
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(qr)
+	err = json.NewEncoder(w).Encode(qr.QrCode)
+	if err != nil {
+		log.Println("Unable to encode response:", err)
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+
+	http.ResponseWriter.WriteHeader(w, http.StatusCreated)
 	log.Println("Successfully generated code")
 }
 
@@ -105,7 +113,7 @@ func UpdateQRCode(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Println("Updating QR code")
-	err = qrdb.Delete(payload.Id)
+	err = qrdb.Update(payload.Id, payload.Title, payload.Description)
 	if err != nil {
 		if err == db.CodeNotFound {
 			http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
