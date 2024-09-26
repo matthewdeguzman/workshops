@@ -5,16 +5,18 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/google/uuid"
-	qrcode "github.com/skip2/go-qrcode"
 	"io"
 	"log"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
+
+	qrcode "github.com/skip2/go-qrcode"
 )
 
 const MAX_UPLOAD_SIZE int64 = 1024 * 1024 // 1 MB
-const QR_CODE_PATH = "./db/qrcodes"
+var qrcodePath = filepath.Join("db", "qrcodes")
 
 var qrdb = db.GetInstance()
 
@@ -37,6 +39,10 @@ func (mr *MalformedRequest) Error() string {
 	return mr.Msg
 }
 
+func imagePath(id string) string {
+	return filepath.Join(qrcodePath, fmt.Sprintf("%s.png", id))
+}
+
 func GenerateQRCode(w http.ResponseWriter, r *http.Request) {
 	log.Println("Parsing form")
 	err := r.ParseMultipartForm(1024 * 10) // 10 KB
@@ -57,28 +63,28 @@ func GenerateQRCode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	filePath := fmt.Sprintf("%s/%s.png", QR_CODE_PATH, uuid.New().String())
-	log.Println("Generating QR code to file:", filePath)
-	err = qrcode.WriteFile(url, qrcode.Medium, 256, filePath)
-	if err != nil {
-		log.Println(err)
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-		return
-	}
-
 	log.Println("Saving QR code to db")
-	qr, err := qrdb.Write(url, title, description, filePath)
+	qr, err := qrdb.Write(url, title, description)
 	if err != nil {
 		log.Println("Unable to write to db:", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
 
+	path := imagePath(qr.Id)
+	log.Println("Generating QR code to file:", path)
+	err = qrcode.WriteFile(url, qrcode.Medium, 512, path)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, "Unable to generate QR Code", http.StatusInternalServerError)
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json")
-	err = json.NewEncoder(w).Encode(qr.QrCode)
+	err = json.NewEncoder(w).Encode(qr)
 	if err != nil {
 		log.Println("Unable to encode response:", err)
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		http.Error(w, "Unable to encode response", http.StatusInternalServerError)
 		return
 	}
 
@@ -86,17 +92,11 @@ func GenerateQRCode(w http.ResponseWriter, r *http.Request) {
 }
 
 func DeleteQRCode(w http.ResponseWriter, r *http.Request) {
-	log.Println("Decoding body")
-	var payload DeletePayload
-	err := DecodeJSONBody(w, r, &payload)
-	if err != nil {
-		log.Println(err)
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-		return
-	}
+	log.Println("Retrieving id from url")
+	id := r.PathValue("id")
 
-	log.Println("Deleting QR code")
-	err = qrdb.Delete(payload.Id)
+	log.Println("Deleting QR code from database")
+	err := qrdb.Delete(id)
 	if err != nil {
 		if err == db.CodeNotFound {
 			http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
@@ -106,14 +106,29 @@ func DeleteQRCode(w http.ResponseWriter, r *http.Request) {
 		log.Println("Unsuccessful deletion")
 		return
 	}
+
+	log.Println("Deleting QR code from images")
+	path := imagePath(id)
+	err = os.Remove(path)
+	if err != nil {
+		log.Printf("Unable to remove code from path '%s'\n", path)
+		http.Error(w, "Unable to delete QR code", http.StatusInternalServerError)
+		return
+	}
+
 	log.Println("Successfully deleted code")
 }
 
 func UpdateQRCode(w http.ResponseWriter, r *http.Request) {
 	log.Println("Decoding body")
-	r.ParseForm()
-	id, title, description := r.FormValue("id"), r.FormValue("title"), r.FormValue("description")
 
+	err := r.ParseMultipartForm(1024 * 10)
+	if err != nil {
+		log.Println("Unable to parse form:", err)
+		http.Error(w, "Unable to parse form", http.StatusBadRequest)
+		return
+	}
+	id, title, description := r.FormValue("id"), r.FormValue("title"), r.FormValue("description")
 	if id == "" {
 		log.Println("id not found")
 		http.Error(w, "id not provided", http.StatusBadRequest)
@@ -121,7 +136,7 @@ func UpdateQRCode(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Println("Updating QR code")
-	err := qrdb.Update(id, title, description)
+	err = qrdb.Update(id, title, description)
 	if err != nil {
 		if err == db.CodeNotFound {
 			http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
@@ -177,7 +192,7 @@ func GetQRCode(w http.ResponseWriter, r *http.Request) {
 	log.Println("Code found!")
 
 	w.Header().Set("Content-Type", "application/json")
-	err = json.NewEncoder(w).Encode(qr.QrCode)
+	err = json.NewEncoder(w).Encode(qr)
 	if err != nil {
 		log.Println("Unable to encode response:", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
@@ -185,6 +200,26 @@ func GetQRCode(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Println("Successfully encoded and code")
+}
+
+func GetQrCodeImage(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+
+	_, err := qrdb.GetById(id)
+	if err != nil {
+		msg := ""
+		if err == db.CodeNotFound {
+			msg = fmt.Sprintf("Image with id '%s' not found", id)
+			http.Error(w, msg, http.StatusNotFound)
+		} else {
+			msg = "Unable to fetch image"
+			http.Error(w, msg, http.StatusInternalServerError)
+		}
+		log.Println(msg)
+		return
+	}
+
+	http.ServeFile(w, r, imagePath(id))
 }
 
 func DecodeJSONBody(w http.ResponseWriter, r *http.Request, dst interface{}) error {

@@ -12,7 +12,7 @@ import (
 )
 
 type DB struct {
-	qrcodes map[string]*QrCodeDb
+	qrcodes map[string]*QrCode
 }
 
 const DB_LOCATION = "./db/db.json"
@@ -30,7 +30,7 @@ func (db *DB) init() {
 	dbMtx.Lock()
 	defer dbMtx.Unlock()
 
-	db.qrcodes = make(map[string]*QrCodeDb)
+	db.qrcodes = make(map[string]*QrCode)
 	file, err := os.ReadFile(DB_LOCATION)
 	if err != nil {
 		log.Println("[DB] Failed to load db.json")
@@ -74,18 +74,18 @@ func (db *DB) GetAll() ([]QrCode, error) {
 
 	var qrcodes []QrCode
 	for _, qr := range db.qrcodes {
-		qrcodes = append(qrcodes, qr.QrCode)
+		qrcodes = append(qrcodes, *qr)
 	}
 
 	return qrcodes, nil
 }
 
-func (db *DB) GetById(id string) (QrCodeDb, error) {
+func (db *DB) GetById(id string) (QrCode, error) {
 	dbMtx.Lock()
 	defer dbMtx.Unlock()
 
 	if _, ok := db.qrcodes[id]; !ok {
-		return QrCodeDb{}, CodeNotFound
+		return QrCode{}, CodeNotFound
 	}
 
 	return *db.qrcodes[id], nil
@@ -114,19 +114,19 @@ func (db *DB) Update(id string, title string, description string) error {
 	}
 	defer db.saveAndUnlock()
 
-	db.qrcodes[id].QrCode.Title = title
-	db.qrcodes[id].QrCode.Description = description
+	db.qrcodes[id].Title = title
+	db.qrcodes[id].Description = description
 	return nil
 }
 
-func (db *DB) Write(url string, title string, description string, path string) (QrCodeDb, error) {
+func (db *DB) Write(url string, title string, description string) (QrCode, error) {
 	id, err := sid.Generate()
 	if err != nil {
 		log.Println("[DB] Unable to create short id:", err)
-		return QrCodeDb{}, InternalDbError
+		return QrCode{}, InternalDbError
 	}
 
-	qr := &QrCodeDb{Path: path, QrCode: QrCode{Id: id, QrCodeData: QrCodeData{Url: url, Title: title, Description: description}}}
+	qr := &QrCode{Id: id, QrCodeData: QrCodeData{Url: url, Title: title, Description: description}}
 
 	dbMtx.Lock()
 	defer db.saveAndUnlock()

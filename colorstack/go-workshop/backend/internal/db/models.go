@@ -10,8 +10,3 @@ type QrCode struct {
 	Id string `json:"id"`
 	QrCodeData
 }
-
-type QrCodeDb struct {
-	Path string `json:"path"`
-	QrCode
-}

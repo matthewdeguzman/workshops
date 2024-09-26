@@ -20,14 +20,14 @@ func main() {
 		middleware.Auth(),
 		middleware.Cors()))
 
-	http.HandleFunc("DELETE /api/delete", middleware.Chain(
+	http.HandleFunc("DELETE /api/delete/{id}", middleware.Chain(
 		api.DeleteQRCode,
 		middleware.Time(),
 		middleware.Logger(),
 		middleware.Auth(),
 		middleware.Cors()))
 
-	http.HandleFunc("PUT /api/update", middleware.Chain(
+	http.HandleFunc("PUT /api/update/", middleware.Chain(
 		api.UpdateQRCode,
 		middleware.Time(),
 		middleware.Logger(),
@@ -39,6 +39,12 @@ func main() {
 		middleware.Time(),
 		middleware.Logger(),
 		middleware.Auth(),
+		middleware.Cors()))
+
+	http.HandleFunc("GET /qr/{id}", middleware.Chain(
+		api.GetQrCodeImage,
+		middleware.Time(),
+		middleware.Logger(),
 		middleware.Cors()))
 
 	log.Println("Starting server on :8080")
