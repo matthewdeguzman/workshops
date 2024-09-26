@@ -38,20 +38,28 @@ func (mr *MalformedRequest) Error() string {
 }
 
 func GenerateQRCode(w http.ResponseWriter, r *http.Request) {
-	log.Println("Generating QR code")
-
-	var payload db.QrCodeData
-
-	err := DecodeJSONBody(w, r, &payload)
+	log.Println("Parsing form")
+	err := r.ParseForm()
 	if err != nil {
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-		log.Println("Unable to decode request body")
+		log.Println("Error ocurred during form processing:", err)
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+
+	url, title, description := r.Form.Get("url"), r.Form.Get("title"), r.Form.Get("description")
+	log.Println("URL:", url)
+	log.Println("Title:", title)
+	log.Println("Description:", description)
+
+	if url == "" {
+		log.Println("Empty URL provided")
+		http.Error(w, "Must provide a URL", http.StatusBadRequest)
 		return
 	}
 
 	filePath := fmt.Sprintf("%s/%s.png", QR_CODE_PATH, uuid.New().String())
-	log.Println("Writing to file:", filePath)
-	err = qrcode.WriteFile(payload.Url, qrcode.Medium, 256, filePath)
+	log.Println("Generating QR code to file:", filePath)
+	err = qrcode.WriteFile(url, qrcode.Medium, 256, filePath)
 	if err != nil {
 		log.Println(err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
@@ -59,7 +67,7 @@ func GenerateQRCode(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Println("Saving QR code to db")
-	qr, err := qrdb.Write(payload, filePath)
+	qr, err := qrdb.Write(url, title, description, filePath)
 	if err != nil {
 		log.Println("Unable to write to db:", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
@@ -104,16 +112,17 @@ func DeleteQRCode(w http.ResponseWriter, r *http.Request) {
 
 func UpdateQRCode(w http.ResponseWriter, r *http.Request) {
 	log.Println("Decoding body")
-	var payload UpdatePayload
-	err := DecodeJSONBody(w, r, &payload)
-	if err != nil {
-		log.Println(err)
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+	r.ParseForm()
+	id, title, description := r.Form.Get("id"), r.Form.Get("title"), r.Form.Get("description")
+
+	if id == "" {
+		log.Println("id not found")
+		http.Error(w, "id not provided", http.StatusBadRequest)
 		return
 	}
 
 	log.Println("Updating QR code")
-	err = qrdb.Update(payload.Id, payload.Title, payload.Description)
+	err := qrdb.Update(id, title, description)
 	if err != nil {
 		if err == db.CodeNotFound {
 			http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)

@@ -119,14 +119,14 @@ func (db *DB) Update(id string, title string, description string) error {
 	return nil
 }
 
-func (db *DB) Write(qrcode QrCodeData, path string) (QrCodeDb, error) {
+func (db *DB) Write(url string, title string, description string, path string) (QrCodeDb, error) {
 	id, err := sid.Generate()
 	if err != nil {
 		log.Println("[DB] Unable to create short id:", err)
 		return QrCodeDb{}, InternalDbError
 	}
 
-	qr := &QrCodeDb{Path: path, QrCode: QrCode{Id: id, QrCodeData: qrcode}}
+	qr := &QrCodeDb{Path: path, QrCode: QrCode{Id: id, QrCodeData: QrCodeData{Url: url, Title: title, Description: description}}}
 
 	dbMtx.Lock()
 	defer db.saveAndUnlock()
