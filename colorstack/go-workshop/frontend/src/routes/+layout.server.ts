@@ -18,7 +18,6 @@ export const load: LayoutServerLoad<{ codes: QrCode[] | null }> = async () => {
 		}
 
 		codes = (await resp.json()) as QrCode[];
-		console.log('code', codes);
 	} catch (err) {
 		console.error(err);
 	}

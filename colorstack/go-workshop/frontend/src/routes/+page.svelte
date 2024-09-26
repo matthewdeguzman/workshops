@@ -1,15 +1,15 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import type { QrCode } from '$lib/types';
+	import { qrCodes, sidebarOpen } from '$lib/stores';
 
 	const token = '1234567890';
 
 	let form: HTMLFormElement;
 
-	async function handleSubmit(e: SubmitEvent) {
+	async function handleGenerate(e: SubmitEvent) {
 		e.preventDefault();
 		const formData = new FormData(form);
-		console.log(Object.fromEntries(formData));
 		try {
 			const resp = await fetch('http://localhost:8080/api/generate', {
 				method: 'POST',
@@ -25,6 +25,9 @@
 			}
 
 			const json = (await resp.json()) as QrCode;
+			qrCodes.update((codes) => [...codes, json]);
+
+			$sidebarOpen = false;
 			await goto(`/qr/${json.id}`);
 		} catch (error) {
 			console.error(error);
@@ -38,7 +41,7 @@
 			class="flex flex-col gap-2 relative"
 			action="http://localhost:8080/api/generate"
 			method="POST"
-			on:submit={handleSubmit}
+			on:submit={handleGenerate}
 			bind:this={form}
 		>
 			<h1 class="title">Awesome QR Code Generator</h1>
@@ -49,9 +52,3 @@
 		</form>
 	</div>
 </section>
-
-<style lang="postcss">
-	.open {
-		transform: translateX(16rem);
-	}
-</style>

@@ -19,7 +19,6 @@ export const load: PageServerLoad<{ code: QrCode | null }> = async ({ params }: 
 		}
 
 		const code = await resp.json() as QrCode;
-		console.log('code', code);
 		return {
 			code
 		}

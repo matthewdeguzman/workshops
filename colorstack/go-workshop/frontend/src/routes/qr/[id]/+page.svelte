@@ -3,18 +3,16 @@
 	import { quadOut } from 'svelte/easing';
 	import { fly, fade } from 'svelte/transition';
 	import type { PageServerData } from './$types';
-	$: id = $page.params.id;
 
 	export let data: PageServerData;
 	$: code = data.code;
+	$: id = $page.params.id;
+	$: editing = $page.url.searchParams.get('edit') === 'true';
 	let formElement: HTMLFormElement;
-	let editing = $page.url.searchParams.get('edit') === 'true';
 
 	async function handleUpdate(e: SubmitEvent) {
-		console.log('submitted');
 		e.preventDefault();
 		const formData = new FormData(formElement);
-		console.log(Object.fromEntries(formData));
 		try {
 			await fetch(`http://localhost:8080/api/update/`, {
 				method: 'PUT',
