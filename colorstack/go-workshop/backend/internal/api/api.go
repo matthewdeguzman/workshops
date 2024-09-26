@@ -46,7 +46,7 @@ func GenerateQRCode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	url, title, description := r.Form.Get("url"), r.Form.Get("title"), r.Form.Get("description")
+	url, title, description := r.FormValue("url"), r.FormValue("title"), r.FormValue("description")
 	log.Println("URL:", url)
 	log.Println("Title:", title)
 	log.Println("Description:", description)
@@ -113,7 +113,7 @@ func DeleteQRCode(w http.ResponseWriter, r *http.Request) {
 func UpdateQRCode(w http.ResponseWriter, r *http.Request) {
 	log.Println("Decoding body")
 	r.ParseForm()
-	id, title, description := r.Form.Get("id"), r.Form.Get("title"), r.Form.Get("description")
+	id, title, description := r.FormValue("id"), r.FormValue("title"), r.FormValue("description")
 
 	if id == "" {
 		log.Println("id not found")
