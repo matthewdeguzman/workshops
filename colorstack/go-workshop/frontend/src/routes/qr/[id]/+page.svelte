@@ -1,8 +1,10 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import { quadOut } from 'svelte/easing';
+	import { goto } from '$app/navigation';
 	import { fly, fade } from 'svelte/transition';
 	import type { PageServerData } from './$types';
+	import { FilePenLine } from 'lucide-svelte';
 
 	export let data: PageServerData;
 	$: code = data.code;
@@ -24,11 +26,21 @@
 		} catch (error) {
 			console.error(error);
 		}
+		await goto(`/qr/${id}?edit=false`);
 		editing = false;
 	}
 </script>
 
 <section class="h-screen grid grid-cols-1 items-center justify-items-center bg-white">
+	<button
+		class="icon absolute top-4 right-4"
+		on:click={() => {
+			goto(`/qr/${id}?edit=true`);
+			editing = true;
+		}}
+	>
+		<FilePenLine />
+	</button>
 	{#if data}
 		{#if !editing}
 			<div
@@ -45,9 +57,6 @@
 					width="512"
 					height="512"
 				/>
-				<button class="btn absolute bottom-[-2rem]" on:click={() => (editing = true)}>
-					Edit Event
-				</button>
 			</div>
 		{:else}
 			<form
@@ -81,7 +90,10 @@
 				<div class="flex gap-4">
 					<button
 						class="btn !bg-transparent hover:!bg-neutral-300 border border-solid border-black !text-black"
-						on:click={() => (editing = false)}>Cancel</button
+						on:click={async () => {
+							await goto(`/qr/${id}?edit=false`);
+							editing = false;
+						}}>Cancel</button
 					>
 					<button class="btn" type="submit">Save Event</button>
 				</div>

@@ -30,17 +30,10 @@
 </script>
 
 <div class="absolute top-4 left-4 z-20 flex gap-1.5">
-	<button
-		on:click={() => ($sidebarOpen = !$sidebarOpen)}
-		class="p-1.5 rounded-lg hover:bg-neutral-300 transition-all ml-[-6px]"
-	>
+	<button on:click={() => ($sidebarOpen = !$sidebarOpen)} class="icon ml-[-6px]">
 		<PanelLeft />
 	</button>
-	<a
-		href="/"
-		on:click={() => ($sidebarOpen = false)}
-		class="p-1.5 rounded-lg hover:bg-neutral-300 transition-all ml-[-6px]"
-	>
+	<a href="/" on:click={() => ($sidebarOpen = false)} class="icon ml-[-6px]">
 		<House />
 	</a>
 </div>
@@ -91,6 +84,10 @@
 
 	:global(.event-input) {
 		@apply border border-gray-300 p-2 rounded-lg w-full;
+	}
+
+	:global(.icon) {
+		@apply p-1.5 rounded-lg hover:bg-neutral-300 transition-all;
 	}
 
 	.open {
