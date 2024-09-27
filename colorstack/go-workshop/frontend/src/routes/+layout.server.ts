@@ -5,7 +5,7 @@ import type { QrCode } from '$lib/types';
 export const load: LayoutServerLoad<{ codes: QrCode[] | null }> = async () => {
 	let codes = null;
 	try {
-		const resp = await fetch(`http://localhost:8080/api/get?all=true`,
+		const resp = await fetch(`${import.meta.env.VITE_BASE_URL}/api/get?all=true`,
 			{
 				method: 'GET',
 				headers: {

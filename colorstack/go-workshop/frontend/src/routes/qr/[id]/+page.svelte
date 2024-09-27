@@ -4,19 +4,21 @@
 	import { goto } from '$app/navigation';
 	import { fly, fade } from 'svelte/transition';
 	import type { PageServerData } from './$types';
-	import { FilePenLine } from 'lucide-svelte';
+	import { FilePenLine, Share, Copy } from 'lucide-svelte';
 
 	export let data: PageServerData;
 	$: code = data.code;
 	$: id = $page.params.id;
 	$: editing = $page.url.searchParams.get('edit') === 'true';
 	let formElement: HTMLFormElement;
+	let displayShareNotif = false;
+	let notifMsg = '';
 
 	async function handleUpdate(e: SubmitEvent) {
 		e.preventDefault();
 		const formData = new FormData(formElement);
 		try {
-			await fetch(`http://localhost:8080/api/update/`, {
+			await fetch(`${import.meta.env.VITE_BASE_URL}/api/update/`, {
 				method: 'PUT',
 				headers: {
 					Authorization: 'Bearer 1234567890'
@@ -29,18 +31,50 @@
 		await goto(`/qr/${id}?edit=false`);
 		editing = false;
 	}
+
+	function displayNotif() {
+		displayShareNotif = true;
+		setTimeout(() => (displayShareNotif = false), 3000);
+	}
 </script>
 
 <section class="h-screen grid grid-cols-1 items-center justify-items-center bg-white">
-	<button
-		class="icon absolute top-4 right-4"
-		on:click={() => {
-			goto(`/qr/${id}?edit=true`);
-			editing = true;
-		}}
-	>
-		<FilePenLine />
-	</button>
+	<div class="absolute top-4 right-4 flex">
+		<button
+			on:click={async () => {
+				try {
+					await navigator.clipboard.writeText($page.url.toString());
+					notifMsg = 'Event copied to clipboard!';
+					displayNotif();
+				} catch (err) {
+					console.error('Failed to copy url: ', err);
+				}
+			}}
+			class="icon"
+		>
+			<Share />
+		</button>
+		<button
+			class="icon"
+			on:click={() => {
+				goto(`/qr/${id}?edit=true`);
+				editing = true;
+			}}
+		>
+			<FilePenLine />
+		</button>
+	</div>
+
+	{#if displayShareNotif}
+		<p
+			class="absolute top-6"
+			in:fly={{ duration: 250, y: -100, easing: quadOut }}
+			out:fly={{ duration: 250, y: -100, easing: quadOut }}
+		>
+			{notifMsg}
+		</p>
+	{/if}
+
 	{#if data}
 		{#if !editing}
 			<div
@@ -52,11 +86,25 @@
 				<p class="text-center text-2xl bg-transparent w-full">{code.description}</p>
 				<img
 					class="rounded-lg"
-					src={`http://localhost:8080/qr/${id}`}
+					src={`${import.meta.env.VITE_BASE_URL}/qr/${id}`}
 					alt="QR code"
 					width="512"
 					height="512"
 				/>
+				<button
+					class="icon"
+					on:click={async () => {
+						try {
+							await navigator.clipboard.writeText(code.url);
+							notifMsg = 'QR Code URL to clipboard!';
+							displayNotif();
+						} catch (err) {
+							console.error(err);
+						}
+					}}
+				>
+					<Copy />
+				</button>
 			</div>
 		{:else}
 			<form

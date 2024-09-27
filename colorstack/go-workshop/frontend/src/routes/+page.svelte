@@ -11,7 +11,7 @@
 		e.preventDefault();
 		const formData = new FormData(form);
 		try {
-			const resp = await fetch('http://localhost:8080/api/generate', {
+			const resp = await fetch(`${import.meta.env.VITE_BASE_URL}/api/generate`, {
 				method: 'POST',
 				headers: {
 					Authorization: `Bearer ${token}`
@@ -39,7 +39,7 @@
 	<div>
 		<form
 			class="flex flex-col gap-2 relative"
-			action="http://localhost:8080/api/generate"
+			action={`${import.meta.env.VITE_BASE_URL}/api/generate`}
 			method="POST"
 			on:submit={handleGenerate}
 			bind:this={form}

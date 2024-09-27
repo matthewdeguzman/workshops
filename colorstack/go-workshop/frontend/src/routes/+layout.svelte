@@ -1,6 +1,6 @@
 <script lang="ts">
 	import '../app.css';
-	import { FilePenLine, Trash, PanelLeft, House } from 'lucide-svelte';
+	import { FilePenLine, Trash, PanelLeft, House, Heart } from 'lucide-svelte';
 	import type { QrCode } from '$lib/types';
 	import type { LayoutData } from './$types';
 	import { sidebarOpen, qrCodes } from '$lib/stores';
@@ -15,7 +15,7 @@
 		e.stopPropagation();
 		e.preventDefault();
 		try {
-			await fetch(`http://localhost:8080/api/delete/${code.id}`, {
+			await fetch(`${import.meta.env.VITE_BASE_URL}/api/delete/${code.id}`, {
 				method: 'DELETE',
 				headers: {
 					Authorization: 'Bearer 1234567890'
@@ -28,6 +28,10 @@
 		}
 	}
 </script>
+
+<svelte:head>
+	<link rel="preconnect" href={import.meta.env.VITE_BASE_URL} />
+</svelte:head>
 
 <div class="absolute top-4 left-4 z-20 flex gap-1.5">
 	<button on:click={() => ($sidebarOpen = !$sidebarOpen)} class="icon ml-[-6px]">
@@ -72,6 +76,12 @@
 	</div>
 </aside>
 <slot />
+<section class="absolute bottom-1 w-full flex flex-col items-center">
+	<h1>
+		Made with <Heart size={16} fill="red" class="inline-block translate-y-[-2px] text-[red]" /> by Matthew
+		DeGuzman
+	</h1>
+</section>
 
 <style lang="postcss">
 	:global(.title) {
