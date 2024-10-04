@@ -1,6 +1,6 @@
 # Go Workshop - Awesome QR Code generator
 
-This workshop goes over creating the backeend for a QR code generator using Go.
+This workshop goes over creating the backend for a QR code generator using Go.
 
 # Demo
 
