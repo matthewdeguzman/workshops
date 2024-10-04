@@ -42,7 +42,7 @@ func main() {
 		middleware.Cors()))
 
 	http.HandleFunc("GET /qr/{id}", middleware.Chain(
-		api.GetQrCodeImage,
+		api.GetQRCodeImage,
 		middleware.Time(),
 		middleware.Logger(),
 		middleware.Cors()))

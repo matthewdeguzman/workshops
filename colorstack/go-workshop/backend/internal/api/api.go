@@ -45,6 +45,8 @@ func imagePath(id string) string {
 
 func GenerateQRCode(w http.ResponseWriter, r *http.Request) {
 	log.Println("Parsing form")
+
+	// 1. Parse request
 	err := r.ParseMultipartForm(1024 * 10) // 10 KB
 	if err != nil {
 		log.Println("Error ocurred during form processing:", err)
@@ -57,12 +59,14 @@ func GenerateQRCode(w http.ResponseWriter, r *http.Request) {
 	log.Println("Title:", title)
 	log.Println("Description:", description)
 
+	// 2. Validate Input
 	if url == "" {
 		log.Println("Empty URL provided")
 		http.Error(w, "Must provide a URL", http.StatusBadRequest)
 		return
 	}
 
+	// 3. Add QR code to DB
 	log.Println("Saving QR code to db")
 	qr, err := qrdb.Write(url, title, description)
 	if err != nil {
@@ -71,6 +75,7 @@ func GenerateQRCode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// 4. Write QR code to database
 	path := imagePath(qr.Id)
 	log.Println("Generating QR code to file:", path)
 	err = qrcode.WriteFile(url, qrcode.Medium, 512, path)
@@ -80,6 +85,7 @@ func GenerateQRCode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// 5. Return id of the code
 	w.Header().Set("Content-Type", "application/json")
 	err = json.NewEncoder(w).Encode(qr)
 	if err != nil {
@@ -93,8 +99,11 @@ func GenerateQRCode(w http.ResponseWriter, r *http.Request) {
 
 func DeleteQRCode(w http.ResponseWriter, r *http.Request) {
 	log.Println("Retrieving id from url")
+
+	// 1. Parse input
 	id := r.PathValue("id")
 
+	// 2. Delete id from database
 	log.Println("Deleting QR code from database")
 	err := qrdb.Delete(id)
 	if err != nil {
@@ -107,6 +116,7 @@ func DeleteQRCode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// 3. Delete id from storage
 	log.Println("Deleting QR code from images")
 	path := imagePath(id)
 	err = os.Remove(path)
@@ -122,6 +132,7 @@ func DeleteQRCode(w http.ResponseWriter, r *http.Request) {
 func UpdateQRCode(w http.ResponseWriter, r *http.Request) {
 	log.Println("Decoding body")
 
+	// 1. Parse input
 	err := r.ParseMultipartForm(1024 * 10)
 	if err != nil {
 		log.Println("Unable to parse form:", err)
@@ -129,12 +140,15 @@ func UpdateQRCode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	id, title, description := r.FormValue("id"), r.FormValue("title"), r.FormValue("description")
+
+	// 2. Validate input
 	if id == "" {
 		log.Println("id not found")
 		http.Error(w, "id not provided", http.StatusBadRequest)
 		return
 	}
 
+	// 3. Update resource in DB
 	log.Println("Updating QR code")
 	err = qrdb.Update(id, title, description)
 	if err != nil {
@@ -151,14 +165,18 @@ func UpdateQRCode(w http.ResponseWriter, r *http.Request) {
 
 func GetQRCode(w http.ResponseWriter, r *http.Request) {
 	log.Println("Fetching Qr Code")
+
+	// 1. Parse input
 	id := r.URL.Query().Get("id")
 	all := r.URL.Query().Get("all")
 
+	// 2. Validate input
 	if all != "" && id != "" {
 		http.Error(w, "Request must specify either 'id' or 'all' but not both", http.StatusBadRequest)
 		return
 	}
 
+	// 3a. Return all QR codes
 	if all == "true" {
 		log.Println("Fetching all QR codes")
 		codes, err := qrdb.GetAll()
@@ -178,6 +196,7 @@ func GetQRCode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// 3b. Return QR code associated with the id
 	qr, err := qrdb.GetById(id)
 	if err != nil {
 		if err == db.CodeNotFound {
@@ -202,9 +221,10 @@ func GetQRCode(w http.ResponseWriter, r *http.Request) {
 	log.Println("Successfully encoded and code")
 }
 
-func GetQrCodeImage(w http.ResponseWriter, r *http.Request) {
+func GetQRCodeImage(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 
+	// 1. Search database for QR Code
 	_, err := qrdb.GetById(id)
 	if err != nil {
 		msg := ""
@@ -219,6 +239,7 @@ func GetQrCodeImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// 2. Serve image
 	http.ServeFile(w, r, imagePath(id))
 }
 
