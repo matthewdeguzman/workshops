@@ -46,6 +46,7 @@
 	class:open={$sidebarOpen}
 >
 	<div class="flex flex-col">
+		<h1 class="pl-2 font-semibold text-lg">QR Codes</h1>
 		{#each $qrCodes as code (code.id)}
 			<a
 				on:click={() => {
