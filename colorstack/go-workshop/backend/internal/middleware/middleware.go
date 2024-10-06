@@ -57,11 +57,11 @@ func Auth() Adapter {
 
 			// NOTE: This is a very basic example of how to authenticate a user, please don't ever use this in production
 			if token != "Bearer 1234567890" {
-				log.Println("[Auth]: Failed to authenticate user.")
+				log.Println("[Auth]: Failed to authorize user.")
 				http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 				return
 			}
-			log.Println("[Auth]: Successfully authenicated user.")
+			log.Println("[Auth]: Successfully authorize user.")
 			f(w, r)
 		}
 	}

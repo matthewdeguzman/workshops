@@ -143,7 +143,7 @@ func UpdateQRCode(w http.ResponseWriter, r *http.Request) {
 
 	// 2. Validate input
 	if id == "" {
-		log.Println("id not found")
+		log.Println("id not provided")
 		http.Error(w, "id not provided", http.StatusBadRequest)
 		return
 	}
