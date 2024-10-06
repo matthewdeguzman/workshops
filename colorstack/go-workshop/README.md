@@ -2,7 +2,8 @@
 
 This workshop goes over creating the backend for a QR code generator using Go.
 
-[Link to slides](https://www.figma.com/slides/NFJKajPjpO3fInemcuLJkg/CRUD-backend-technical-workshop?node-id=1-2535&t=Hl64gj01IguPa1wA-1)
+[Slides](https://www.figma.com/slides/NFJKajPjpO3fInemcuLJkg/CRUD-backend-technical-workshop?node-id=1-2535&t=Hl64gj01IguPa1wA-1)
+
 [Workshop Recording](https://youtu.be/w7luQcCssZg)
 
 # Demo
